@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Controller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #581c87 50%, #1e1b4b 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+            touch-action: manipulation;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 24px;
+        }
+        
+        .connect-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .connect-btn.disconnected {
+            background: #2563eb;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        
+        .connect-btn.connected {
+            background: #16a34a;
+            color: white;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            background: rgba(30, 41, 59, 0.5);
+            padding: 5px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: #7c3aed;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .panel {
+            display: none;
+            background: rgba(30, 41, 59, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(124, 58, 237, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            max-width: 350px;
+            margin: 0 auto;
+        }
+        
+        .dpad button {
+            aspect-ratio: 1;
+            border: none;
+            border-radius: 12px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+            color: white;
+        }
+        
+        .dpad button:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-up, .btn-down {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+        
+        .btn-left, .btn-right {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .servo-control {
+            margin-bottom: 25px;
+        }
+        
+        .servo-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .servo-label {
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #c4b5fd;
+            font-size: 14px;
+        }
+        
+        .servo-value {
+            background: #334155;
+            padding: 5px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #7c3aed;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #7c3aed;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .quick-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .quick-btn {
+            padding: 20px;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.1s;
+        }
+        
+        .quick-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-open {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .btn-close {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .btn-reset {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            margin-bottom: 20px;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .warning {
+            background: rgba(202, 138, 4, 0.2);
+            border: 1px solid rgba(202, 138, 4, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #fef3c7;
+        }
+        
+        .instructions {
+            text-align: center;
+            margin-top: 20px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Robot Controller</h1>
+            <button id="connectBtn" class="connect-btn disconnected" onclick="connectBluetooth()">
+                Connect BT
+            </button>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('car')">🚗 Car Control</button>
+            <button class="tab" onclick="switchTab('arm')">🦾 Robotic Arm</button>
+        </div>
+        
+        <!-- Car Control Panel -->
+        <div id="carPanel" class="panel active">
+            <h2 style="text-align: center; margin-bottom: 30px;">Movement Control</h2>
+            <div class="dpad">
+                <div></div>
+                <button class="btn-up" 
+                    onmousedown="carControl('F', true)" 
+                    onmouseup="carControl('F', false)"
+                    ontouchstart="carControl('F', true)" 
+                    ontouchend="carControl('F', false)">▲</button>
+                <div></div>
+                
+                <button class="btn-left" 
+                    onmousedown="carControl('L', true)" 
+                    onmouseup="carControl('L', false)"
+                    ontouchstart="carControl('L', true)" 
+                    ontouchend="carControl('L', false)">◄</button>
+                <button class="btn-stop" onclick="sendCommand('S/')">STOP</button>
+                <button class="btn-right" 
+                    onmousedown="carControl('R', true)" 
+                    onmouseup="carControl('R', false)"
+                    ontouchstart="carControl('R', true)" 
+                    ontouchend="carControl('R', false)">►</button>
+                
+                <div></div>
+                <button class="btn-down" 
+                    onmousedown="carControl('B', true)" 
+                    onmouseup="carControl('B', false)"
+                    ontouchstart="carControl('B', true)" 
+                    ontouchend="carControl('B', false)">▼</button>
+                <div></div>
+            </div>
+            <div class="instructions">Press and hold buttons to move • Release to stop</div>
+        </div>
+        
+        <!-- Robotic Arm Panel -->
+        <div id="armPanel" class="panel">
+            <button class="btn-reset" onclick="resetServos()">🔄 Reset All Servos</button>
+            
+            <div class="servo-control">
+                <div class="servo-header">
+                    <span class="servo-label">Shoulder</span>
+                    <span class="servo-value" id="shoulder-value">90°</span>
+                </div>
+                <input type="range" class="slider" min="0" max="180" value="90" 
+                    oninput="updateServo('shoulder', this.value)">
+            </div>
+            
+            <div class="servo-control">
+                <div class="servo-header">
+                    <span class="servo-label">Elbow</span>
+                    <span class="servo-value" id="elbow-value">90°</span>
+                </div>
+                <input type="range" class="slider" min="0" max="180" value="90" 
+                    oninput="updateServo('elbow', this.value)">
+            </div>
+            
+            <div class="servo-control">
+                <div class="servo-header">
+                    <span class="servo-label">Wrist</span>
+                    <span class="servo-value" id="wrist-value">90°</span>
+                </div>
+                <input type="range" class="slider" min="0" max="180" value="90" 
+                    oninput="updateServo('wrist', this.value)">
+            </div>
+            
+            <div class="servo-control">
+                <div class="servo-header">
+                    <span class="servo-label">Gripper</span>
+                    <span class="servo-value" id="gripper-value">90°</span>
+                </div>
+                <input type="range" class="slider" min="0" max="180" value="90" 
+                    oninput="updateServo('gripper', this.value)">
+            </div>
+            
+            <div class="servo-control">
+                <div class="servo-header">
+                    <span class="servo-label">Rotate</span>
+                    <span class="servo-value" id="rotate-value">90°</span>
+                </div>
+                <input type="range" class="slider" min="0" max="180" value="90" 
+                    oninput="updateServo('rotate', this.value)">
+            </div>
+            
+            <h3 style="margin: 30px 0 15px 0;">Quick Gripper Control</h3>
+            <div class="quick-controls">
+                <button class="quick-btn btn-open" onclick="quickGripper(30)">OPEN</button>
+                <button class="quick-btn btn-close" onclick="quickGripper(150)">CLOSE</button>
+            </div>
+        </div>
+        
+        <div id="warning" class="warning">
+            <strong>⚠️ Not Connected:</strong> Click "Connect BT" to pair with your HC-05 Bluetooth module.
+        </div>
+    </div>
+    
+    <script>
+        let bluetoothDevice = null;
+        let characteristic = null;
+        let isConnected = false;
+        let activeDirections = new Set();
+        
+        async function connectBluetooth() {
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
+                });
+                
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+                characteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+                
+                bluetoothDevice = device;
+                isConnected = true;
+                
+                document.getElementById('connectBtn').textContent = 'Connected ✓';
+                document.getElementById('connectBtn').className = 'connect-btn connected';
+                document.getElementById('warning').style.display = 'none';
+                
+                device.addEventListener('gattserverdisconnected', () => {
+                    isConnected = false;
+                    document.getElementById('connectBtn').textContent = 'Connect BT';
+                    document.getElementById('connectBtn').className = 'connect-btn disconnected';
+                    document.getElementById('warning').style.display = 'block';
+                });
+                
+            } catch (error) {
+                console.error('Connection failed:', error);
+                alert('Failed to connect! Make sure:\n1. Bluetooth is ON\n2. HC-05 is powered\n3. Using Chrome/Edge browser');
+            }
+        }
+        
+        async function sendCommand(command) {
+            if (characteristic && isConnected) {
+                try {
+                    const encoder = new TextEncoder();
+                    await characteristic.writeValue(encoder.encode(command));
+                } catch (error) {
+                    console.error('Send failed:', error);
+                }
+            }
+        }
+        
+        function carControl(direction, isPressed) {
+            if (isPressed) {
+                activeDirections.add(direction);
+                sendCommand(direction + '/');
+            } else {
+                activeDirections.delete(direction);
+                if (activeDirections.size === 0) {
+                    sendCommand('S/');
+                }
+            }
+        }
+        
+        function updateServo(servo, value) {
+            document.getElementById(servo + '-value').textContent = value + '°';
+            
+            const servoMap = {
+                'shoulder': 'S',
+                'elbow': 'E',
+                'wrist': 'W',
+                'gripper': 'G',
+                'rotate': 'R'
+            };
+            
+            sendCommand(value + servoMap[servo]);
+        }
+        
+        function resetServos() {
+            const servos = ['shoulder', 'elbow', 'wrist', 'gripper', 'rotate'];
+            servos.forEach(servo => {
+                const slider = document.querySelector(`input[oninput*="${servo}"]`);
+                slider.value = 90;
+                updateServo(servo, 90);
+            });
+        }
+        
+        function quickGripper(value) {
+            const slider = document.querySelector('input[oninput*="gripper"]');
+            slider.value = value;
+            updateServo('gripper', value);
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Panel').classList.add('active');
+        }
+        
+        // Prevent accidental page scrolling on touch devices
+        document.addEventListener('touchmove', (e) => {
+            if (e.target.closest('.dpad')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
